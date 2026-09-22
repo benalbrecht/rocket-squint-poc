@@ -1,0 +1,12 @@
+{
+  "name": "rocket-squint-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "squint compile && esbuild target/counter.js --bundle --minify --format=esm --outfile=target/counter.min.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "squint-cljs": "0.14.208"
+  }
+}
