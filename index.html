@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Squint + Rocket</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "squint-cljs/core.js": "https://cdn.jsdelivr.net/npm/squint-cljs@0.14.208/core.js",
+        "squint-cljs/src/squint/html.js": "https://cdn.jsdelivr.net/npm/squint-cljs@0.14.208/src/squint/html.js"
+      }
+    }
+  </script>
+  <style>
+    demo-counter { display: block; margin-bottom: 0.5rem; }
+    demo-counter div { display: flex; gap: 0.5rem; align-items: center; }
+  </style>
+</head>
+<body>
+  <h1>Squint + Rocket</h1>
+  <p>The counter is a Rocket element written in Squint, compiled in the browser. The buttons use Datastar attributes.</p>
+  <demo-counter id="counter" start="2" step="3" label="Inventory"></demo-counter>
+  <button type="button" data-on:click="counter.start = 10">Set start to 10</button>
+  <script type="text/x-squint" id="counter-source">
+(ns demo.counter
+  (:require ["https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.4/bundles/datastar-rocket.js" :refer [rocket]]))
+
+;; `^html` emits Rocket's tagged template. Squint's own `#html` returns a
+;; string object Rocket will not mount.
+(rocket "demo-counter"
+        {:mode "light"
+         :props (fn [{:keys [number string]}]
+                  {:start (-> number (.min 0))
+                   :step (-> number (.min 1) (.default 1))
+                   :label (-> string .-trim (.default "Count"))})
+         :setup (fn [{:strs [$$] :keys [props observeProps cleanup]}]
+                  (set! (.-count $$) (.-start props))
+                  (cleanup
+                   (observeProps
+                    (fn [next]
+                      (set! (.-count $$) (.-start next)))
+                    "start")))
+         ;; Reset assigns the signal, with `start` baked into the attribute.
+         ;; A start change has to rerender so that value stays current, which
+         ;; is the default `renderOnPropChange`.
+         :render (fn [{:keys [html] {:keys [label step start]} :props}]
+                   #html ^html
+                   [:section
+                    [:h3 label]
+                    [:div
+                     [:button {:type "button"
+                               :data-on:click (str "$$count -= " step)
+                               :data-attr:disabled "$$count <= 0"}
+                      "−"]
+                     [:output {:data-text "$$count"}]
+                     [:button {:type "button"
+                               :data-on:click (str "$$count += " step)}
+                      "+"]
+                     [:template {:data-if (str "$$count !== " start)}
+                      [:button {:type "button"
+                                :data-on:click (str "$$count = " start)}
+                       "Reset"]]]])})
+  </script>
+  <script type="module">
+    import { compileString } from "https://cdn.jsdelivr.net/npm/squint-cljs@0.14.208/+esm"
+
+    const source = document.querySelector("#counter-source").textContent
+    const js = compileString(source)
+    const url = URL.createObjectURL(new Blob([js], { type: "text/javascript" }))
+    await import(url)
+  </script>
+</body>
+</html>
